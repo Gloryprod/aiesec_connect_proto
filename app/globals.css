@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
+/* =========================================================
+   AIESEC CONNECT — DESIGN SYSTEM
+   ========================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* =========================
+     Brand colors
+     ========================= */
+  --aiesec-navy: #172b78;
+  --aiesec-blue: #263de0;
+  --aiesec-indigo: #4f46e5;
+  --aiesec-purple: #6536e8;
+  --aiesec-purple-light: #8b5cf6;
+
+  /* =========================
+     Backgrounds
+     ========================= */
+  --aiesec-background: #f5f6fc;
+  --aiesec-surface: #ffffff;
+  --aiesec-surface-soft: #eef0ff;
+  --aiesec-border: #e8ecf5;
+
+  /* =========================
+     Text
+     ========================= */
+  --aiesec-text: #172b78;
+  --aiesec-text-secondary: #4b5563;
+  --aiesec-text-muted: #9ca3af;
+
+  /* =========================
+     Status
+     ========================= */
+  --aiesec-success: #16a34a;
+  --aiesec-warning: #f59e0b;
+  --aiesec-danger: #e11d48;
+  --aiesec-info: #0ea5e9;
+
+  /* =========================
+     Global application colors
+     ========================= */
+  --background: var(--aiesec-background);
+  --foreground: var(--aiesec-text);
 }
+
+/* =========================================================
+   Tailwind v4 theme
+   ========================================================= */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand */
+  --color-aiesec-navy: var(--aiesec-navy);
+  --color-aiesec-blue: var(--aiesec-blue);
+  --color-aiesec-indigo: var(--aiesec-indigo);
+  --color-aiesec-purple: var(--aiesec-purple);
+  --color-aiesec-purple-light: var(--aiesec-purple-light);
+
+  /* Backgrounds */
+  --color-aiesec-background: var(--aiesec-background);
+  --color-aiesec-surface: var(--aiesec-surface);
+  --color-aiesec-surface-soft: var(--aiesec-surface-soft);
+  --color-aiesec-border: var(--aiesec-border);
+
+  /* Text */
+  --color-aiesec-text: var(--aiesec-text);
+  --color-aiesec-text-secondary: var(--aiesec-text-secondary);
+  --color-aiesec-text-muted: var(--aiesec-text-muted);
+
+  /* Status */
+  --color-aiesec-success: var(--aiesec-success);
+  --color-aiesec-warning: var(--aiesec-warning);
+  --color-aiesec-danger: var(--aiesec-danger);
+  --color-aiesec-info: var(--aiesec-info);
+
+  /* Fonts Configuration */
+  --font-heading: var(--font-outfit), sans-serif;
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =========================================================
+   Base
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* =========================================================
+   Selection
+   ========================================================= */
+
+::selection {
+  background: var(--aiesec-purple);
+  color: #ffffff;
+}
+
+/* =========================================================
+   Scrollbar
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--aiesec-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--aiesec-border);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--aiesec-purple);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
