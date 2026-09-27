@@ -130,7 +130,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
-      <div className="md:hidden"><MobileHeader /></div>
+      {/* <div className="md:hidden"><MobileHeader /></div> */}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
         <WebSidebar activeTab="profil" onTabChange={() => {}} />

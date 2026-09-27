@@ -118,7 +118,7 @@ export default function MembersPage() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
         <WebSidebar activeTab="explorer" onTabChange={() => {}} />
 
-        <section className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-0 pb-20 md:pb-6 space-y-6">
+        <section className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 md:px-0 pb-20 md:pb-6 space-y-6">
           
           {/* En-tête de la page */}
           <div className="bg-aiesec-surface border border-aiesec-border rounded-2xl p-6 shadow-sm space-y-4">
