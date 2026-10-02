@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { MOCK_USERS, UserProfile } from "@/data/mockUsers";
 
-// Type pour les données nécessaires lors de l'inscription
 export type RegisterData = Omit<UserProfile, "id" | "avatar"> & {
   password?: string;
 };
@@ -16,12 +15,14 @@ interface AuthContextType {
   login: (email: string) => boolean;
   register: (data: RegisterData) => boolean;
   switchUser: (userId: string) => void;
+  updateUserConnections: (updatedUsers: UserProfile[]) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_USERS_KEY = "aiesec_registered_users";
+// Clé globale pour conserver la liste complète à jour (Mock + Inscrits + Connexions)
+const LOCAL_STORAGE_ALL_USERS_KEY = "aiesec_all_users_store";
 const LOCAL_STORAGE_CURRENT_USER_KEY = "aiesec_current_user_id";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,43 +30,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [usersList, setUsersList] = useState<UserProfile[]>(MOCK_USERS);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 1. Charger la liste complète des utilisateurs au démarrage
   useEffect(() => {
-    // 1. Charger la liste complète des utilisateurs (MOCK_USERS + inscrits via localStorage)
-    const savedUsers = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
+    const savedAllUsers = localStorage.getItem(LOCAL_STORAGE_ALL_USERS_KEY);
     let allUsers = [...MOCK_USERS];
 
-    if (savedUsers) {
+    if (savedAllUsers) {
       try {
-        const parsedUsers: UserProfile[] = JSON.parse(savedUsers);
-        // Évite les doublons avec MOCK_USERS
-        const customUsers = parsedUsers.filter(
-          (cu) => !MOCK_USERS.some((mu) => mu.id === cu.id)
-        );
-        allUsers = [...MOCK_USERS, ...customUsers];
+        const parsedUsers: UserProfile[] = JSON.parse(savedAllUsers);
+        if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
+          // Fusionner avec MOCK_USERS pour garantir que de nouveaux mocks soient inclus si ajoutés au code
+          const savedIds = new Set(parsedUsers.map((u) => u.id));
+          const missingMocks = MOCK_USERS.filter((mu) => !savedIds.has(mu.id));
+          allUsers = [...parsedUsers, ...missingMocks];
+        }
       } catch (e) {
-        console.error("Erreur de lecture des utilisateurs dans localStorage", e);
+        console.error("Erreur de lecture des utilisateurs dans localStorage :", e);
       }
     }
 
     setUsersList(allUsers);
+    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(allUsers));
 
-    // 2. Récupérer l'utilisateur actuellement connecté
+    // 2. Restaurer l'utilisateur connecté
     const savedUserId = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_KEY);
     if (savedUserId) {
       const found = allUsers.find((u) => u.id === savedUserId);
       if (found) setUser(found);
-    } else {
-      // Connecté par défaut avec le premier profil
-      setUser(allUsers[0]);
-      localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_KEY, allUsers[0].id);
     }
 
     setIsLoading(false);
   }, []);
 
+  // Méthode clé : Mettre à jour les connexions en direct dans AuthContext
+  const updateUserConnections = (updatedUsersList: UserProfile[]) => {
+    setUsersList(updatedUsersList);
+    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(updatedUsersList));
+
+    // Mettre à jour également l'instance de l'utilisateur actif s'il est impacté
+    if (user) {
+      const refreshedCurrentUser = updatedUsersList.find((u) => u.id === user.id);
+      if (refreshedCurrentUser) {
+        setUser(refreshedCurrentUser);
+      }
+    }
+  };
+
   // Connexion
   const login = (email: string) => {
-    const found = usersList.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    let freshUsersList = usersList;
+
+    // Relire la base de données unifiée depuis le localStorage
+    const savedAllUsers = localStorage.getItem(LOCAL_STORAGE_ALL_USERS_KEY);
+    if (savedAllUsers) {
+      try {
+        freshUsersList = JSON.parse(savedAllUsers);
+        setUsersList(freshUsersList); // Synchroniser l'état local React
+      } catch (e) {
+        console.error("Erreur de lecture lors du login :", e);
+      }
+    }
+
+    const found = freshUsersList.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (found) {
       setUser(found);
       localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_KEY, found.id);
@@ -76,13 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Inscription
   const register = (data: RegisterData) => {
-    // Vérifier si l'email existe déjà
     const existing = usersList.find((u) => u.email.toLowerCase() === data.email.toLowerCase());
     if (existing) {
       return false;
     }
 
-    // Générer un avatar avec les initiales
     const nameParts = data.fullName.trim().split(" ");
     const avatar = nameParts.length >= 2
       ? `${nameParts[0].charAt(0)}${nameParts[nameParts.length - 1].charAt(0)}`.toUpperCase()
@@ -95,26 +119,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       skills: data.skills || [],
       experiences: data.experiences || [],
       journey: data.journey || [],
-      recognitions: data.recognitions || []
+      recognitions: data.recognitions || [],
+      connections: [] // Initialisation explicite de la liste des connexions
     };
 
     const updatedUsers = [...usersList, newUser];
     setUsersList(updatedUsers);
+    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(updatedUsers));
 
-    // Sauvegarder les utilisateurs personnalisés dans localStorage
-    const customUsers = updatedUsers.filter(
-      (u) => !MOCK_USERS.some((mu) => mu.id === u.id)
-    );
-    localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(customUsers));
-
-    // Connecter immédiatement le nouvel utilisateur
     setUser(newUser);
     localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_KEY, newUser.id);
 
     return true;
   };
 
-  // Basculer d'utilisateur (pour le UserSwitcher)
+  // Basculer d'utilisateur
   const switchUser = (userId: string) => {
     const found = usersList.find((u) => u.id === userId);
     if (found) {
@@ -139,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         switchUser,
+        updateUserConnections,
         logout
       }}
     >

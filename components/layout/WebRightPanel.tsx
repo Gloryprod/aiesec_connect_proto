@@ -6,15 +6,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { useConnection } from "@/hook/sendConnection";
 import { ArrowRight, UserPlus } from "lucide-react";
 
 export const WebRightPanel: React.FC = () => {
   const { users } = useData();
+  const { sendConnectionRequest} = useConnection();
   const { user: currentUser } = useAuth();
   const router = useRouter();
 
   // Filtrer pour ne pas afficher l'utilisateur actuellement connecté
-  const filteredUsers = users.filter((u) => u.id !== currentUser?.id);
+  const filteredUsers = users.filter((u) => u.id !== currentUser?.id && !currentUser?.connections?.includes(u.id));
 
   // Prendre une sélection dynamique de membres à recommander (ex: les 3 à 4 premiers)
   const suggestedMembers = filteredUsers.slice(0, 4);
@@ -69,10 +71,11 @@ export const WebRightPanel: React.FC = () => {
                   className="!px-2.5 !py-1 text-[11px] shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Logique de demande de connexion
+                    sendConnectionRequest(member)
+
                   }}
                 >
-                  Connecter
+                  Se Connecter
                 </Button>
               </div>
             ))
@@ -91,7 +94,7 @@ export const WebRightPanel: React.FC = () => {
           onClick={() => router.push("/home/membres")}
         >
           <UserPlus className="w-3.5 h-3.5" />
-          <span>Découvrir le réseau</span>
+          <span>Découvrir d&apos;autres membres</span>
         </Button>
       </div>
     </aside>

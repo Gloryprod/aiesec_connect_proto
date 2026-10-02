@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { DataProvider } from "@/context/DataContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { Toaster } from "react-hot-toast";
 // Police pour les titres (Heading)
 const outfit = Outfit({
   subsets: ["latin"],
@@ -36,7 +37,8 @@ export default function RootLayout({
         <AuthProvider>
           <DataProvider>          
             <NotificationProvider>          
-                {children}
+              <Toaster />
+              {children}
             </NotificationProvider>
           </DataProvider>
         </AuthProvider> 

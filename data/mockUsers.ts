@@ -21,6 +21,7 @@ export interface UserProfile {
     lc: string;
   }[];
   recognitions: string[];
+  connections?: string[];
 }
 
 export const MOCK_USERS: UserProfile[] = [
@@ -53,7 +54,8 @@ export const MOCK_USERS: UserProfile[] = [
       { year: "2024", role: "Team Member", lc: "LC Abomey-Calavi" },
       { year: "2025", role: "Team Leader", lc: "LC Abomey-Calavi" }
     ],
-    recognitions: ["Member of the Month — August 2026", "Top Contributor oGV 2024"]
+    recognitions: ["Member of the Month — August 2026", "Top Contributor oGV 2024"],
+    connections: []
   },
   {
     id: "usr-02",
@@ -85,7 +87,8 @@ export const MOCK_USERS: UserProfile[] = [
       { year: "2024", role: "Team Leader", lc: "LC Cotonou" },
       { year: "2025", role: "VP iGT", lc: "LC Cotonou" }
     ],
-    recognitions: ["Collaboration Champion — 2025", "Best VP Performance Q1 2026"]
+    recognitions: ["Collaboration Champion — 2025", "Best VP Performance Q1 2026"],
+    connections: []
   },
   {
     id: "usr-03",
@@ -118,6 +121,7 @@ export const MOCK_USERS: UserProfile[] = [
       { year: "2024", role: "VP MKT/IT", lc: "LTS Benin" },
       { year: "2025", role: "LCP", lc: "LTS Benin" }
     ],
-    recognitions: ["Most Improved Entity Award 2025", "Leadership Excellence Award 2026"]
+    recognitions: ["Most Improved Entity Award 2025", "Leadership Excellence Award 2026"],
+    connections: []
   }
 ];

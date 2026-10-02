@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
-export type NavTab = "accueil" | "explorer" | "messages" | "profil" | "logout";
+export type NavTab = "accueil" | "explorer" | "messages" | "profil" | "logout" | "network" ;
 
 interface BottomNavigationProps {
   activeTab: NavTab;
@@ -47,6 +47,20 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         </button>
       </Link>
 
+      <Link href={"/home/network"}>
+        <button
+          onClick={() => onTabChange("network")}
+          className={`flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${
+            activeTab === "network" ? "text-aiesec-blue font-semibold" : "text-aiesec-text-muted hover:text-aiesec-text-secondary"
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span className="text-[10px] font-sans">Réseau</span>
+        </button>
+      </Link>
+
 
       {/* Bouton Action Créer (+ Center) */}
       <button
@@ -60,7 +74,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       </button>
 
       {/* Messages */}
-      <Link href={"/home/messages"}>
+      <Link href={"/home/chat"}>
         <button
           onClick={() => onTabChange("messages")}
           className={`flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${

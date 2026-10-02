@@ -165,7 +165,7 @@ export const WebHeader: React.FC = () => {
                                     handleAction(notif.id, act);
                                     setIsDropdownOpen(false);
                                   }}
-                                  className={`px-2.5 py-1 text-[11px] rounded-lg font-medium transition-all ${
+                                  className={`cursor-pointer px-2.5 py-1 text-[11px] rounded-lg font-medium transition-all ${
                                     act.variant === "primary"
                                       ? "bg-aiesec-blue text-white hover:bg-aiesec-blue/90"
                                       : "bg-aiesec-background border border-aiesec-border text-aiesec-text hover:bg-aiesec-surface-soft"

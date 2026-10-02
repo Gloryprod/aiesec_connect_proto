@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState } from "react";
+import React, { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { WebSidebar } from "@/components/layout/WebSidebar";
@@ -8,16 +8,31 @@ import { ArrowLeft, UserPlus, Check, Award, Briefcase, Star } from "lucide-react
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
 import { useData } from "@/context/DataContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function MemberProfilePage({ params }: { params: Promise<{ id: string }> }) {
   
   const { id } = use(params);
   const router = useRouter();
   const [isConnected, setIsConnected] = useState(false);
+  const { isLoading, isAuthenticated, user } = useAuth();
   const { getUserById } = useData();
   const member = getUserById(id) ?? null;
 
-  console.log(member)
+  // Redirection si non authentifié
+    useEffect(() => {
+      if (!isLoading && (!isAuthenticated || !user)) {
+        router.push("/login");
+      }
+    }, [isLoading, isAuthenticated, user, router]);
+
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-aiesec-background">
+          <div className="w-8 h-8 border-4 border-aiesec-blue border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
 
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
@@ -28,13 +43,13 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-6 flex gap-6">
         <WebSidebar onTabChange={() => {}} />
 
-        <section className="flex-1 max-w-3xl mx-auto space-y-6">
-          <button 
+        <section className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 md:px-0 pb-20 md:pb-6 space-y-6">
+          {/* <button 
             onClick={() => router.back()}
             className="cursor-pointer flex items-center gap-2 text-xs font-semibold text-aiesec-text-muted hover:text-aiesec-blue transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Retour
-          </button>
+          </button> */}
 
           {/* Carte En-tête Profil */}
           <div className="bg-aiesec-surface border border-aiesec-border rounded-2xl p-6 shadow-sm space-y-4">

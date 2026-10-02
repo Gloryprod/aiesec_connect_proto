@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
+import { useConnection } from "@/hook/sendConnection";
 import { WebHeader } from "@/components/layout/WebHeader";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
@@ -12,25 +14,30 @@ import {
   Search, 
   Building2, 
   UserPlus, 
-  Check, 
+  Clock,
   Sparkles, 
   X,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Inbox
 } from "lucide-react";
 import { UserProfile } from "@/data/mockUsers";
 
+const LOCAL_STORAGE_PENDING_KEY = "aiesec_pending_connection_requests";
+
 export default function MembersPage() {
   const { users } = useData();
-  const { user : currentUser, isAuthenticated, isLoading } = useAuth();   
+  const { sendConnectionRequest } = useConnection();
+  const { notifications, handleAction } = useNotifications();
+  const { user: currentUser, isAuthenticated, isLoading } = useAuth();   
   const router = useRouter();
 
   // Redirection si non authentifié
-      useEffect(() => {
-        if (!isLoading && (!isAuthenticated || !currentUser)) {
-          router.push("/login");
-        }
-      }, [isLoading, isAuthenticated, currentUser, router]);
+  useEffect(() => {
+    if (!isLoading && (!isAuthenticated || !currentUser)) {
+      router.push("/login");
+    }
+  }, [isLoading, isAuthenticated, currentUser, router]);
 
   // États des filtres et recherche
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,11 +45,39 @@ export default function MembersPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("ALL");
   const [selectedSkill, setSelectedSkill] = useState<string>("ALL");
   
-  // État de connexion suivie (Simulation)
-  const [connectedUsers, setConnectedUsers] = useState<string[]>([]);
+  // Suivi des IDs des membres à qui une demande a été envoyée
+  const [pendingRequests, setPendingRequests] = useState<Record<string, string[]>>({});
   
-  // État pour la modale d'aperçu rapide
+  // Modale d'aperçu rapide
   const [previewUser, setPreviewUser] = useState<UserProfile | null>(null);
+
+  // Charger les demandes en attente depuis le localStorage
+  useEffect(() => {
+    const loadPending = () => {
+      const savedPending = localStorage.getItem(LOCAL_STORAGE_PENDING_KEY);
+      if (savedPending) {
+        try {
+          setPendingRequests(JSON.parse(savedPending));
+        } catch (e) {
+          console.error("Erreur de chargement des demandes :", e);
+        }
+      }
+    };
+
+    loadPending();
+
+    // Recharger le state quand le localStorage change
+    window.addEventListener("storage", loadPending);
+    return () => window.removeEventListener("storage", loadPending);
+  }, []);
+
+  const myPendingList = (currentUser?.id && pendingRequests[currentUser.id]) || [];
+  // 1. Extraire les demandes d'invitations reçues par l'utilisateur connecté
+  const incomingRequests = useMemo(() => {
+    return notifications.filter(
+      (n) => n.recipientId === currentUser?.id && n.type === "connection_request"
+    );
+  }, [notifications, currentUser]);
 
   // Extraire les options uniques pour les filtres
   const allLcs = useMemo(() => {
@@ -57,42 +92,48 @@ export default function MembersPage() {
     return Array.from(skills);
   }, [users]);
 
-  // Filtrage dynamique des membres
+  // 2. Filtrage dynamique des membres suggérés
   const filteredMembers = useMemo(() => {
-    return users.filter((member) => {
-      // Ne pas s'afficher soi-même
-      if (member.id === currentUser?.id) return false;
+    const userConnections = currentUser?.connections || [];
+    const sendersIds = incomingRequests.map((r) => r.sender?.id);
 
-      // Recherche globale (nom, rôle, bio, compétences)
+    return users.filter((member) => {
+      if (member.id === currentUser?.id) return false;
+      if (userConnections.includes(member.id)) return false;
+      if (sendersIds.includes(member.id)) return false;
+
       const matchesSearch =
         searchQuery === "" ||
-        member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.skills?.some((s: string) => s.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Filtre LC
       const matchesLc = selectedLc === "ALL" || member.lc === selectedLc;
 
-      // Filtre Département / Rôle
       const matchesDepartment =
         selectedDepartment === "ALL" ||
         member.role?.toLowerCase().includes(selectedDepartment.toLowerCase());
 
-      // Filtre Compétence
       const matchesSkill =
         selectedSkill === "ALL" || member.skills?.includes(selectedSkill);
 
       return matchesSearch && matchesLc && matchesDepartment && matchesSkill;
     });
-  }, [users, currentUser, searchQuery, selectedLc, selectedDepartment, selectedSkill]);
+  }, [users, currentUser, incomingRequests, searchQuery, selectedLc, selectedDepartment, selectedSkill]);
 
-  const toggleConnect = (memberId: string) => {
-    setConnectedUsers((prev) =>
-      prev.includes(memberId)
-        ? prev.filter((id) => id !== memberId)
-        : [...prev, memberId]
-    );
+  // Handler pour envoyer la demande
+  const handleSendRequest = (e: React.MouseEvent, member: UserProfile) => {
+    e.stopPropagation(); // Évite l'ouverture de la modale lors du clic sur le bouton
+    if (!currentUser?.id) return;
+
+    sendConnectionRequest(member);
+    const updated: Record<string, string[]> = {
+      ...pendingRequests,
+      [currentUser.id]: [...(pendingRequests[currentUser.id] || []), member.id],
+    };
+    setPendingRequests(updated);
+    localStorage.setItem(LOCAL_STORAGE_PENDING_KEY, JSON.stringify(updated));
   };
 
   const resetFilters = () => {
@@ -100,6 +141,17 @@ export default function MembersPage() {
     setSelectedLc("ALL");
     setSelectedDepartment("ALL");
     setSelectedSkill("ALL");
+  };
+
+  // Helper pour extraire proprement les initiales
+  const getInitials = (fullName?: string) => {
+    if (!fullName) return "U";
+    return fullName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
   };
 
   if (isLoading) {
@@ -113,24 +165,85 @@ export default function MembersPage() {
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
-      <div className="md:hidden"><MobileHeader /></div>
+      <div className="md:hidden"><MobileHeader title="Membres" showBack /></div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
         <WebSidebar activeTab="explorer" onTabChange={() => {}} />
 
         <section className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 md:px-0 pb-20 md:pb-6 space-y-6">
           
-          {/* En-tête de la page */}
+          {/* SECTION 1 : DEMANDES D'INVITATIONS REÇUES */}
+          {incomingRequests.length > 0 && (
+            <div className="bg-aiesec-surface border border-aiesec-blue/30 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-aiesec-border pb-3">
+                <div className="flex items-center gap-2">
+                  <Inbox className="w-5 h-5 text-aiesec-blue" />
+                  <h2 className="font-bold text-sm md:text-base text-aiesec-navy">
+                    Demandes d&apos;invitation en attente
+                  </h2>
+                </div>
+                <span className="bg-aiesec-blue text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  {incomingRequests.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {incomingRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="p-4 rounded-xl border border-aiesec-border bg-aiesec-background flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-aiesec-blue/10 border border-aiesec-blue/20 flex items-center justify-center font-bold text-sm text-aiesec-blue shrink-0">
+                        {request.sender?.avatar || getInitials(request.sender?.fullName)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs md:text-sm text-aiesec-navy">
+                          {request.sender?.fullName}
+                        </h4>
+                        <p className="text-[11px] text-aiesec-blue font-medium">
+                          {request.sender?.role || "Membre"} • {request.sender?.lc || "AIESEC"}
+                        </p>
+                        <p className="text-[10px] text-aiesec-text-muted mt-0.5">
+                          {request.message}
+                        </p>
+                      </div>
+                    </div>
+
+                    {request.actions && request.actions.length > 0 && (
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {request.actions.map((action) => (
+                          <button
+                            key={action.id}
+                            onClick={() => handleAction(request.id, action)}
+                            className={`px-3 py-1.5 text-xs rounded-xl font-semibold transition-all cursor-pointer ${
+                              action.variant === "primary"
+                                ? "bg-aiesec-blue text-white hover:bg-aiesec-blue-dark shadow-sm"
+                                : "bg-aiesec-surface border border-aiesec-border text-aiesec-text-secondary hover:bg-aiesec-surface-soft"
+                            }`}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 2 : MEMBRES SUGGÉRÉS ET RECHERCHE */}
           <div className="bg-aiesec-surface border border-aiesec-border rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h1 className="text-xl font-bold text-aiesec-text">Découvrir le Réseau</h1>
+                <h1 className="text-xl font-bold text-aiesec-text">Découvres les AIESECers autour de toi !</h1>
                 <p className="text-xs text-aiesec-text-muted">
-                  Explorez et connectez-vous avec les membres et alimni de votre comité et d&apos;ailleurs.
+                  Explorez et connectez-vous avec les membres et alumni de votre comité et d&apos;ailleurs.
                 </p>
               </div>
               <span className="self-start sm:self-auto bg-aiesec-blue/10 text-aiesec-blue text-xs font-semibold px-3 py-1 rounded-full">
-                {filteredMembers.length} Membre{filteredMembers.length > 1 ? "s" : ""} trouvé{filteredMembers.length > 1 ? "s" : ""}
+                {filteredMembers.length} Membre{filteredMembers.length > 1 ? "s" : ""} suggéré{filteredMembers.length > 1 ? "s" : ""}
               </span>
             </div>
 
@@ -156,7 +269,6 @@ export default function MembersPage() {
 
             {/* Sélecteurs de Filtres */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-aiesec-border">
-              {/* Filtre par LC */}
               <div>
                 <label className="text-[11px] text-aiesec-text-muted font-medium mb-1 block">Comité Local (LC)</label>
                 <select
@@ -171,7 +283,6 @@ export default function MembersPage() {
                 </select>
               </div>
 
-              {/* Filtre par Pôle / Département */}
               <div>
                 <label className="text-[11px] text-aiesec-text-muted font-medium mb-1 block">Département / Pôle</label>
                 <select
@@ -189,7 +300,6 @@ export default function MembersPage() {
                 </select>
               </div>
 
-              {/* Filtre par Compétence */}
               <div>
                 <label className="text-[11px] text-aiesec-text-muted font-medium mb-1 block">Compétence</label>
                 <select
@@ -205,12 +315,11 @@ export default function MembersPage() {
               </div>
             </div>
 
-            {/* Réinitialisation si au moins un filtre est actif */}
             {(searchQuery || selectedLc !== "ALL" || selectedDepartment !== "ALL" || selectedSkill !== "ALL") && (
               <div className="flex justify-end pt-1">
                 <button
                   onClick={resetFilters}
-                  className="text-xs text-aiesec-blue hover:underline font-medium flex items-center gap-1"
+                  className="text-xs text-aiesec-blue hover:underline font-medium flex items-center gap-1 cursor-pointer"
                 >
                   <SlidersHorizontal className="w-3 h-3" />
                   <span>Réinitialiser les filtres</span>
@@ -221,12 +330,9 @@ export default function MembersPage() {
 
           {/* Grille des membres */}
           {filteredMembers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
               {filteredMembers.map((member) => {
-                const isConnected = connectedUsers.includes(member.id);
-                const initials = member.fullName
-                  ? member.fullName.split(" ").map((n: string) => n[0]).join("").substring(0, 2)
-                  : "U";
+                const isPending = myPendingList.includes(member.id);
 
                 return (
                   <div
@@ -235,11 +341,10 @@ export default function MembersPage() {
                     onClick={() => setPreviewUser(member)}
                   >
                     <div className="space-y-3">
-                      {/* En-tête Carte */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-2xl bg-aiesec-blue/10 border border-aiesec-blue/20 flex items-center justify-center font-bold text-base text-aiesec-blue group-hover:bg-aiesec-blue group-hover:text-white transition-all shrink-0">
-                            {initials}
+                            {getInitials(member.fullName)}
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-bold text-sm text-aiesec-text truncate group-hover:text-aiesec-blue transition-colors">
@@ -255,35 +360,8 @@ export default function MembersPage() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Bio courte */}
-                      {member.bio && (
-                        <p className="text-xs text-aiesec-text-muted line-clamp-2 leading-relaxed">
-                          {member.bio}
-                        </p>
-                      )}
-
-                      {/* Compétences (Badges) */}
-                      {member.skills && member.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {member.skills.slice(0, 3).map((skill: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="bg-aiesec-background border border-aiesec-border text-aiesec-text-muted text-[10px] px-2 py-0.5 rounded-md"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {member.skills.length > 3 && (
-                            <span className="text-[10px] text-aiesec-text-muted self-center">
-                              +{member.skills.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
 
-                    {/* Pied de Carte / Actions */}
                     <div className="pt-4 mt-4 border-t border-aiesec-border flex items-center justify-between gap-2">
                       <span className="text-[10px] text-aiesec-text-muted flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-amber-500" />
@@ -291,25 +369,23 @@ export default function MembersPage() {
                       </span>
 
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleConnect(member.id);
-                        }}
+                        disabled={isPending}
+                        onClick={(e) => handleSendRequest(e, member)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                          isConnected
-                            ? "bg-green-500/10 text-green-600 border border-green-500/20"
-                            : "bg-aiesec-blue text-white hover:bg-aiesec-blue-dark"
+                          isPending
+                            ? "bg-amber-500/10 text-amber-600 border border-amber-500/20 cursor-not-allowed opacity-90"
+                            : "bg-aiesec-blue text-white hover:bg-aiesec-blue-dark cursor-pointer"
                         }`}
                       >
-                        {isConnected ? (
+                        {isPending ? (
                           <>
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Connecté</span>
+                            <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                            <span>Invitation envoyée</span>
                           </>
                         ) : (
                           <>
                             <UserPlus className="w-3.5 h-3.5" />
-                            <span>Connecter</span>
+                            <span>Se Connecter</span>
                           </>
                         )}
                       </button>
@@ -327,7 +403,7 @@ export default function MembersPage() {
               </p>
               <button
                 onClick={resetFilters}
-                className="bg-aiesec-blue text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-aiesec-blue-dark transition-colors"
+                className="bg-aiesec-blue text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-aiesec-blue-dark transition-colors cursor-pointer"
               >
                 Réinitialiser la recherche
               </button>
@@ -336,21 +412,26 @@ export default function MembersPage() {
         </section>
       </main>
 
-      {/* Modale Aperçu Rapide du Profil */}
+      {/* Modale Aperçu Rapide */}
       {previewUser && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-aiesec-surface border border-aiesec-border w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl relative">
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewUser(null)}
+        >
+          <div 
+            className="bg-aiesec-surface border border-aiesec-border w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setPreviewUser(null)}
-              className="absolute top-4 right-4 text-aiesec-text-muted hover:text-aiesec-text"
+              className="absolute top-4 right-4 text-aiesec-text-muted hover:text-aiesec-text cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* En-tête Aperçu */}
             <div className="flex items-center gap-4 pt-2">
               <div className="w-16 h-16 rounded-2xl bg-aiesec-blue text-white flex items-center justify-center font-bold text-xl shadow-md shrink-0">
-                {previewUser.fullName.split(" ").map((n: string) => n[0]).join("")}
+                {getInitials(previewUser.fullName)}
               </div>
               <div>
                 <h2 className="text-base font-bold text-aiesec-text">{previewUser.fullName}</h2>
@@ -362,14 +443,12 @@ export default function MembersPage() {
               </div>
             </div>
 
-            {/* Bio */}
             {previewUser.bio && (
               <p className="text-xs text-aiesec-text leading-relaxed bg-aiesec-background p-3 rounded-xl border border-aiesec-border">
                 {previewUser.bio}
               </p>
             )}
 
-            {/* Aperçu AIESEC Journey */}
             {previewUser.journey && previewUser.journey.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-aiesec-text flex items-center gap-1.5">
@@ -388,14 +467,13 @@ export default function MembersPage() {
               </div>
             )}
 
-            {/* Pied de Modale */}
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => {
                   router.push(`/home/membres/${previewUser.id}`);
                   setPreviewUser(null);
                 }}
-                className="flex-1 bg-aiesec-blue text-white py-2.5 rounded-xl text-xs font-bold hover:bg-aiesec-blue-dark transition-colors flex items-center justify-center gap-1"
+                className="flex-1 bg-aiesec-blue text-white py-2.5 rounded-xl text-xs font-bold hover:bg-aiesec-blue-dark transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <span>Voir le profil complet</span>
                 <ChevronRight className="w-4 h-4" />

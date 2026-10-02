@@ -2,7 +2,7 @@ import React from "react";
 import { NavTab } from "./BottomNavigation";
 import {useAuth} from "@/context/AuthContext";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, Network } from "lucide-react";
 
 interface WebSidebarProps {
   activeTab?: NavTab;
@@ -33,10 +33,17 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({ activeTab, onTabChange }
       ),
     },
     {
+      id: "network" as NavTab,
+      label: "Réseau",
+      href: "/home/network",
+      icon: (
+        <Network></Network>
+      ),
+    },
+    {
       id: "messages" as NavTab,
-      label: "Messages",
-      href: "/message",
-      badge: "3",
+      label: "Chat",
+      href: "/home/chat",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -95,11 +102,11 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({ activeTab, onTabChange }
                 {item.icon}
                 <span>{item.label}</span>
               </div>
-              {item.badge && (
+              {/* {item.badge && (
                 <span className="bg-aiesec-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {item.badge}
                 </span>
-              )}
+              )} */}
             </Link>
           );
         })}

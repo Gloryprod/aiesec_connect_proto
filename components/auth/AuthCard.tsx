@@ -56,6 +56,7 @@ export const AuthCard: React.FC = () => {
           experiences: [],
           journey: [{ year: "2026", role: formData.role, lc: formData.lc }],
           recognitions: [],
+          connections: [],
         };
 
         const success = register(registerPayload);

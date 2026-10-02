@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { MOCK_USERS, UserProfile } from "@/data/mockUsers";
+import { useAuth } from "./AuthContext";
 
 export interface Comment {
   id: string;
@@ -32,48 +33,37 @@ interface DataContextType {
   toggleLike: (postId: string, userId: string) => void;
   addComment: (postId: string, content: string, author: UserProfile) => void;
   getUserById: (id: string) => UserProfile | undefined;
+  acceptConnectionRequest: (user1Id: string, user2Id: string) => void;
   refreshUsers: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_POSTS_KEY = "aiesec_connect_shared_posts";
-const LOCAL_STORAGE_USERS_KEY = "aiesec_registered_users";
+const LOCAL_STORAGE_ALL_USERS_KEY = "aiesec_all_users_store";
+const LOCAL_STORAGE_PENDING_KEY = "aiesec_pending_connection_requests";
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS);
+  const { usersList, updateUserConnections } = useAuth();
+  const [users, setUsers] = useState<UserProfile[]>(usersList);
 
-  // Fonction utilitaire pour charger et fusionner tous les utilisateurs
-  const loadAllUsers = (): UserProfile[] => {
-    let registeredUsers: UserProfile[] = [];
-    if (typeof window !== "undefined") {
-      const savedUsersJson = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
-      if (savedUsersJson) {
-        try {
-          registeredUsers = JSON.parse(savedUsersJson);
-        } catch (error) {
-          console.error("Erreur lors de la lecture des utilisateurs inscrits :", error);
-        }
-      }
-    }
-
-    // Éviter les doublons basés sur l'ID utilisateur
-    const registeredIds = new Set(registeredUsers.map((u) => u.id));
-    const uniqueMockUsers = MOCK_USERS.filter((u) => !registeredIds.has(u.id));
-
-    return [...uniqueMockUsers, ...registeredUsers];
-  };
-
-  // Charger les utilisateurs et publications au montage
+  // Garder `users` synchronisé avec le store centralisé d'AuthContext
   useEffect(() => {
-    // 1. Charger tous les utilisateurs (Mock + Inscrits)
-    setUsers(loadAllUsers());
+    setUsers(usersList);
+  }, [usersList]);
 
-    // Ecouter les modifications de localStorage (ex: réinscription dans un autre onglet/composant)
+  // Chargement initial des publications
+  useEffect(() => {
+    // 1. Écouter les changements multi-onglets sur la clé unifiée des utilisateurs
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === LOCAL_STORAGE_USERS_KEY) {
-        setUsers(loadAllUsers());
+      if (e.key === LOCAL_STORAGE_ALL_USERS_KEY && e.newValue) {
+        try {
+          const updated = JSON.parse(e.newValue);
+          setUsers(updated);
+        } catch (err) {
+          console.error("Erreur de synchronisation storage:", err);
+        }
       }
     };
     window.addEventListener("storage", handleStorageChange);
@@ -121,9 +111,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Fonction permettant de rafraîchir manuellement la liste des utilisateurs
+  // Rafraîchissement manuel si nécessaire
   const refreshUsers = () => {
-    setUsers(loadAllUsers());
+    const saved = localStorage.getItem(LOCAL_STORAGE_ALL_USERS_KEY);
+    if (saved) {
+      try {
+        setUsers(JSON.parse(saved));
+      } catch (e) {
+        console.error("Erreur lors du rafraîchissement des utilisateurs:", e);
+      }
+    }
   };
 
   // Sauvegarde automatique des posts
@@ -188,6 +185,62 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return users.find((u) => u.id === id);
   };
 
+
+  const removePendingRequest = (requesterId: string, recipientId: string) => {
+    if (typeof window === "undefined") return;
+
+    const savedPendingJson = localStorage.getItem(LOCAL_STORAGE_PENDING_KEY);
+    if (!savedPendingJson) return;
+
+    try {
+      const pendingMap: Record<string, string[]> = JSON.parse(savedPendingJson);
+
+      // Si le demandeur a des demandes enregistrées
+      if (pendingMap[requesterId]) {
+        // Filtrer pour retirer l'ID du destinataire qui vient d'accepter
+        const updatedList = pendingMap[requesterId].filter((id) => id !== recipientId);
+
+        const updatedMap = {
+          ...pendingMap,
+          [requesterId]: updatedList,
+        };
+
+        // Mettre à jour le localStorage
+        localStorage.setItem(LOCAL_STORAGE_PENDING_KEY, JSON.stringify(updatedMap));
+
+        // Déclencher un événement storage pour synchroniser les composants ou onglets ouverts
+        window.dispatchEvent(new Event("storage"));
+      }
+    } catch (e) {
+      console.error("Erreur lors du nettoyage de la demande en attente :", e);
+    }
+  };
+
+  // 5. Accepter la connexion entre deux membres (Mise à jour synchronisée)
+  const acceptConnectionRequest = (user1Id: string, user2Id: string) => {
+    const updatedUsers = users.map((u) => {
+      if (u.id === user1Id) {
+        const currentConnections = u.connections || [];
+        if (!currentConnections.includes(user2Id)) {
+          return { ...u, connections: [...currentConnections, user2Id] };
+        }
+      }
+      if (u.id === user2Id) {
+        const currentConnections = u.connections || [];
+        if (!currentConnections.includes(user1Id)) {
+          return { ...u, connections: [...currentConnections, user1Id] };
+        }
+      }
+      return u;
+    });
+
+    setUsers(updatedUsers);
+    
+    // Propager la mise à jour à AuthContext pour rafraîchir l'utilisateur actif
+    updateUserConnections(updatedUsers);
+    removePendingRequest(user1Id, user2Id);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -197,6 +250,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleLike,
         addComment,
         getUserById,
+        acceptConnectionRequest,
         refreshUsers
       }}
     >
