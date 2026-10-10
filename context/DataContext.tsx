@@ -82,9 +82,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         {
           id: "post-1",
           authorId: "usr-01",
-          authorName: "Armel AHOUADI",
+          authorName: "Paul TOLOU",
           authorRole: "Team Leader • LC Abomey-Calavi",
-          authorAvatar: "AA",
+          authorAvatar: "PT",
           timeAgo: "Il y a 2h",
           content:
             "Aujourd'hui, nous avons lancé les préparatifs pour le sommet national du leadership. Très enthousiaste à l'idée de collaborer avec tous les comités locaux ! 💙",

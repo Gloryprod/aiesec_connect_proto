@@ -142,3 +142,29 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Illustration 3D qui flotte doucement */
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50%      { transform: translateY(-16px) rotate(1.5deg); }
+}
+.auth-float {
+  animation: auth-float 6s ease-in-out infinite;
+}
+
+/* Zoom lent sur la photo de fond */
+@keyframes auth-kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+.auth-kenburns {
+  animation: auth-kenburns 7s ease-out forwards;
+}
+
+/* Respect des préférences d'accessibilité */
+@media (prefers-reduced-motion: reduce) {
+  .auth-float,
+  .auth-kenburns {
+    animation: none;
+  }
+}

@@ -27,14 +27,14 @@ export interface UserProfile {
 export const MOCK_USERS: UserProfile[] = [
   {
     id: "usr-01",
-    email: "armel.ahouadi@aiesec.net",
+    email: "paul.tolou@aiesec.net",
     password: "password123",
-    fullName: "Armel AHOUADI",
+    fullName: "Paul TOLOU",
     role: "Team Leader",
     lc: "LC Abomey-Calavi",
     country: "Bénin",
     bio: "Passionné par le développement du potentiel humain et l'impact social à travers le leadership de la jeunesse.",
-    avatar: "AA",
+    avatar: "PT",
     skills: ["Leadership", "Project Management", "Public Speaking", "Event Management"],
     experiences: [
       {

@@ -9,7 +9,7 @@ interface Story {
 
 export const StoriesBar: React.FC<{ stories: Story[] }> = ({ stories }) => {
   return (
-    <div className="flex items-center gap-3 overflow-x-auto py-3 px-4 no-scrollbar border-b border-aiesec-border bg-aiesec-surface">
+    <div className="flex items-center gap-3 overflow-x-auto py-3 px-4 no-scrollbar rounded border-b border-aiesec-border bg-aiesec-surface">
       {stories.map((story) => (
         <div key={story.id} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer">
           <div
