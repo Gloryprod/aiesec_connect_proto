@@ -165,7 +165,7 @@ export default function MembersPage() {
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
-      <div className="md:hidden"><MobileHeader title="Membres" showBack /></div>
+      <div className="md:hidden"><MobileHeader title="Membres" showBack onBack={() => router.push("/home")}/></div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
         <WebSidebar activeTab="explorer" onTabChange={() => {}} />

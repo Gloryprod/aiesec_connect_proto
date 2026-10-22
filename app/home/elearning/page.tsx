@@ -73,7 +73,7 @@ export default function ELearningPage() {
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
-      <div className="md:hidden"><MobileHeader title="E-Learning" /></div>
+      <div className="md:hidden"><MobileHeader title="E-Learning" showBack onBack={() => router.push("/home")}/></div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
         <WebSidebar activeTab="learning" onTabChange={() => {}} />
@@ -81,7 +81,7 @@ export default function ELearningPage() {
         <section className="flex-1 max-w-2xl mx-auto w-full pb-20 md:pb-6 space-y-6">
           
           {/* En-tête Bannières E-learning */}
-          <div className="bg-linear-to-r from-aiesec-blue to-blue-700 text-white rounded-2xl p-6 shadow-sm relative overflow-hidden">
+          <div className="bg-linear-to-r from-aiesec-blue to-blue-700 text-white p-6 shadow-sm relative overflow-hidden">
             <div className="relative z-10 space-y-2">
               <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase">
                 AIESEC Academy

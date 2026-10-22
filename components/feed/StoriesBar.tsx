@@ -401,7 +401,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
   return (
     <>
       {/* 1. Barre de raccourcis Stories */}
-      <div className="flex items-center gap-3 overflow-x-auto py-3 px-4 no-scrollbar rounded-2xl border border-aiesec-border bg-aiesec-surface shadow-xs">
+      <div className="flex items-center gap-3 overflow-x-auto py-3 px-4 no-scrollbar border border-aiesec-border bg-aiesec-surface shadow-xs">
         {/* Bouton Ajouter une story */}
         <div
           onClick={() => setIsCreateOpen(true)}

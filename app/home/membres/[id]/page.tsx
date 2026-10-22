@@ -67,7 +67,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
-      <div className="md:hidden"><MobileHeader /></div>
+      <div className="md:hidden"><MobileHeader title="Profil du Membre" showBack onBack={() => router.push("/home/membres")}/></div>
       
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-6 flex gap-6">
         <WebSidebar onTabChange={() => {}} />
