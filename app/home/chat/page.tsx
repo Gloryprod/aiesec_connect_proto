@@ -24,6 +24,7 @@ function ChatContent() {
   const { user } = useAuth();
   const { users } = useData();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const selectedUserIdParam = searchParams.get("userId");
 
@@ -39,14 +40,12 @@ function ChatContent() {
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState<DirectMessage[]>([]);
 
-  // 1. Définir le destinataire actif (Query Param ou Premier ami connecté)
+  // 1. Définir le destinataire actif (Query Param prioritaire, sinon null sur mobile pour voir la liste)
   useEffect(() => {
     if (selectedUserIdParam) {
       setActiveRecipientId(selectedUserIdParam);
-    } else if (!activeRecipientId && userConnections.length > 0) {
-      setActiveRecipientId(userConnections[0].id);
     }
-  }, [selectedUserIdParam, userConnections]);
+  }, [selectedUserIdParam]);
 
   // 2. Chargement initial + Synchronisation en temps réel (multi-onglets/fenêtres)
   useEffect(() => {
@@ -109,7 +108,7 @@ function ChatContent() {
     <div className="min-h-screen bg-aiesec-background flex flex-col">
       <WebHeader />
       <div className="md:hidden">
-        <MobileHeader title="Messages" showBack />
+        <MobileHeader title={activeRecipient ? activeRecipient.fullName : "Messages"} showBack={!!activeRecipient} onBack={() => setActiveRecipientId(null)} />
       </div>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-0 md:px-6 py-0 md:py-6 flex gap-6">
@@ -117,21 +116,24 @@ function ChatContent() {
           <WebSidebar activeTab="messages" onTabChange={() => {}} />
         </div>
 
-        <section className="flex-1 max-w-4xl mx-auto w-full h-[calc(100vh-120px)] bg-aiesec-surface border border-aiesec-border rounded-2xl shadow-sm flex overflow-hidden">
+        <section className="flex-1 max-w-4xl mx-auto w-full h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] bg-aiesec-surface border border-aiesec-border shadow-sm flex overflow-hidden">
           
-          {/* Liste des conversations à gauche */}
+          {/* Liste des conversations à gauche (Visible sur mobile si aucun chat actif, toujours visible sur Desktop) */}
           <div className={`w-full md:w-80 border-r border-aiesec-border flex flex-col ${activeRecipientId ? 'hidden md:flex' : 'flex'}`}>
-            <div className="p-4 border-b border-aiesec-border">
+            <div className="p-4 border-b border-aiesec-border flex items-center justify-between">
               <h2 className="font-bold text-sm text-aiesec-navy flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-aiesec-blue" />
-                Conversations
+                Messages Directs
               </h2>
+              <span className="text-[10px] bg-aiesec-blue/10 text-aiesec-blue px-2 py-0.5 rounded-full font-semibold">
+                {userConnections.length}
+              </span>
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-aiesec-border">
               {userConnections.length === 0 ? (
                 <div className="p-6 text-center text-xs text-aiesec-text-muted">
-                  Vous n&apos;avez pas encore de connexion pour discuter.
+                  Vous n&apos;avez pas encore de connexions pour discuter. Connectez-vous avec d&apos;autres membres !
                 </div>
               ) : (
                 userConnections.map((conn) => (
@@ -155,19 +157,19 @@ function ChatContent() {
             </div>
           </div>
 
-          {/* Zone de Chat à droite */}
+          {/* Zone de Chat à droite (Visible sur mobile si un chat est actif, toujours visible sur Desktop) */}
           <div className={`flex-1 flex flex-col h-full bg-aiesec-background ${!activeRecipientId ? 'hidden md:flex' : 'flex'}`}>
             {activeRecipient ? (
               <>
-                {/* En-tête du chat */}
+                {/* En-tête du chat (Desktop & Mobile) */}
                 <div className="p-3.5 bg-aiesec-surface border-b border-aiesec-border flex items-center gap-3">
                   <button
                     onClick={() => setActiveRecipientId(null)}
-                    className="md:hidden p-1 text-aiesec-navy"
+                    className="md:hidden p-1 text-aiesec-navy hover:bg-aiesec-background rounded-lg cursor-pointer"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className="w-9 h-9 rounded-full bg-aiesec-blue text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-9 h-9 rounded-full bg-aiesec-blue text-white flex items-center justify-center font-bold text-xs shrink-0">
                     {activeRecipient.avatar || activeRecipient.fullName.charAt(0)}
                   </div>
                   <div>
@@ -179,7 +181,7 @@ function ChatContent() {
                 {/* Fil des messages */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-3">
                   {conversation.length === 0 ? (
-                    <div className="text-center text-xs text-aiesec-text-muted py-8">
+                    <div className="text-center text-xs text-aiesec-text-muted py-12">
                       Envoyez votre premier message à {activeRecipient.fullName} ! 👋
                     </div>
                   ) : (
@@ -214,7 +216,7 @@ function ChatContent() {
                   />
                   <button
                     type="submit"
-                    className="bg-aiesec-blue text-white p-2 rounded-xl hover:bg-aiesec-blue/90 transition-colors"
+                    className="bg-aiesec-blue text-white p-2 rounded-xl hover:bg-aiesec-blue/90 transition-colors cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -222,7 +224,7 @@ function ChatContent() {
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-aiesec-text-muted">
-                <MessageSquare className="w-12 h-12 mb-2 text-aiesec-text-muted" />
+                <MessageSquare className="w-12 h-12 mb-2 text-aiesec-text-muted/50" />
                 <p className="text-xs font-semibold">Sélectionnez une conversation pour commencer à discuter.</p>
               </div>
             )}
@@ -230,7 +232,7 @@ function ChatContent() {
         </section>
       </main>
 
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+      <div className="md:hidden">
         <BottomNavigation activeTab="messages" onTabChange={() => {}} />
       </div>
     </div>

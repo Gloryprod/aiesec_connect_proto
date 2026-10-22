@@ -21,41 +21,65 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 1. Incrémenter cette version chaque fois que le fichier mockUsers.ts est modifié
+const MOCK_DATA_VERSION = "v1.3";
+
 // Clé globale pour conserver la liste complète à jour (Mock + Inscrits + Connexions)
 const LOCAL_STORAGE_ALL_USERS_KEY = "aiesec_all_users_store";
 const LOCAL_STORAGE_CURRENT_USER_KEY = "aiesec_current_user_id";
+const LOCAL_STORAGE_VERSION_KEY = "aiesec_mock_version";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [usersList, setUsersList] = useState<UserProfile[]>(MOCK_USERS);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Charger la liste complète des utilisateurs au démarrage
+  // 1. Initialisation intelligente avec fusion & versioning
   useEffect(() => {
-    const savedAllUsers = localStorage.getItem(LOCAL_STORAGE_ALL_USERS_KEY);
-    let allUsers = [...MOCK_USERS];
+    const savedVersion = localStorage.getItem(LOCAL_STORAGE_VERSION_KEY);
+    const savedAllUsersStr = localStorage.getItem(LOCAL_STORAGE_ALL_USERS_KEY);
 
-    if (savedAllUsers) {
+    let finalUsersList: UserProfile[] = [...MOCK_USERS];
+
+    if (savedAllUsersStr) {
       try {
-        const parsedUsers: UserProfile[] = JSON.parse(savedAllUsers);
-        if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
-          // Fusionner avec MOCK_USERS pour garantir que de nouveaux mocks soient inclus si ajoutés au code
-          const savedIds = new Set(parsedUsers.map((u) => u.id));
-          const missingMocks = MOCK_USERS.filter((mu) => !savedIds.has(mu.id));
-          allUsers = [...parsedUsers, ...missingMocks];
+        const savedUsers: UserProfile[] = JSON.parse(savedAllUsersStr);
+
+        if (Array.isArray(savedUsers) && savedUsers.length > 0) {
+          const usersMap = new Map<string, UserProfile>();
+
+          // 1. Charger en priorité les utilisateurs du localStorage (pour conserver les modifs de profil, skills, etc.)
+          savedUsers.forEach((u) => usersMap.set(u.id, u));
+
+          // 2. Parcourir les MOCK_USERS du code source
+          MOCK_USERS.forEach((mockUser) => {
+            const existing = usersMap.get(mockUser.id);
+            if (!existing) {
+              // C'est un TOUT NOUVEAU mock ajouté dans le code source : on l'ajoute !
+              usersMap.set(mockUser.id, mockUser);
+            } 
+            // Note : Si 'existing' existe déjà, on NE L'ÉCRASE PAS avec 'mockUser' 
+            // pour que les modifications de profil de l'utilisateur soient précieusement conservées.
+          });
+
+          finalUsersList = Array.from(usersMap.values());
+          localStorage.setItem(LOCAL_STORAGE_VERSION_KEY, MOCK_DATA_VERSION);
         }
       } catch (e) {
         console.error("Erreur de lecture des utilisateurs dans localStorage :", e);
       }
+    } else {
+      // Premier lancement sur ce navigateur
+      localStorage.setItem(LOCAL_STORAGE_VERSION_KEY, MOCK_DATA_VERSION);
     }
 
-    setUsersList(allUsers);
-    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(allUsers));
+    setUsersList(finalUsersList);
+    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(finalUsersList));
 
     // 2. Restaurer l'utilisateur connecté
     const savedUserId = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_KEY);
     if (savedUserId) {
-      const found = allUsers.find((u) => u.id === savedUserId);
+      const found = finalUsersList.find((u) => u.id === savedUserId);
       if (found) setUser(found);
     }
 
@@ -64,12 +88,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Méthode clé : Mettre à jour les connexions en direct dans AuthContext
   const updateUserConnections = (updatedUsersList: UserProfile[]) => {
-    setUsersList(updatedUsersList);
-    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(updatedUsersList));
+    // Nettoyer les doublons par sécurité avec un Map
+    const uniqueMap = new Map<string, UserProfile>();
+    updatedUsersList.forEach((u) => uniqueMap.set(u.id, u));
+    const cleanList = Array.from(uniqueMap.values());
 
-    // Mettre à jour également l'instance de l'utilisateur actif s'il est impacté
+    setUsersList(cleanList);
+    localStorage.setItem(LOCAL_STORAGE_ALL_USERS_KEY, JSON.stringify(cleanList));
+
     if (user) {
-      const refreshedCurrentUser = updatedUsersList.find((u) => u.id === user.id);
+      const refreshedCurrentUser = cleanList.find((u) => u.id === user.id);
       if (refreshedCurrentUser) {
         setUser(refreshedCurrentUser);
       }

@@ -225,7 +225,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { ...u, connections: [...currentConnections, user2Id] };
         }
       }
-      if (u.id === user2Id) {
+      if (u.id === user2Id) { 
         const currentConnections = u.connections || [];
         if (!currentConnections.includes(user1Id)) {
           return { ...u, connections: [...currentConnections, user1Id] };

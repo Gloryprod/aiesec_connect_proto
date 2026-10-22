@@ -391,20 +391,43 @@ export const WebHeader: React.FC = () => {
                       <div className="p-6 text-center text-aiesec-text-muted text-xs">Aucune notification pour le moment.</div>
                     ) : (
                       userNotifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          onClick={() => !notif.isRead && markAsRead(notif.id)}
-                          className={`p-3.5 transition-colors cursor-pointer flex gap-3 ${
-                            !notif.isRead ? "bg-aiesec-blue/5 hover:bg-aiesec-blue/10" : "hover:bg-aiesec-background"
-                          }`}
-                        >
-                          <div className="w-8 h-8 rounded-full bg-aiesec-surface-soft border border-aiesec-blue/20 flex items-center justify-center font-bold text-xs text-aiesec-blue shrink-0">
-                            {notif.sender?.avatar || "A"}
+                        <div key={notif.id} className={notif.isRead ? "hover:bg-aiesec-background" : "bg-aiesec-blue/5 hover:bg-aiesec-blue/10"}>
+                          <div
+                            onClick={() => !notif.isRead && markAsRead(notif.id)}
+                            className="p-3.5 transition-colors cursor-pointer flex gap-3"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-aiesec-surface-soft border border-aiesec-blue/20 flex items-center justify-center font-bold text-xs text-aiesec-blue shrink-0">
+                              {notif.sender?.avatar || "A"}
+                            </div>
+                            <div className="flex-1 text-xs">
+                              <p className="font-semibold text-aiesec-navy">{notif.title}</p>
+                              <p className="text-aiesec-text mt-0.5">{notif.message}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 text-xs">
-                            <p className="font-semibold text-aiesec-navy">{notif.title}</p>
-                            <p className="text-aiesec-text mt-0.5">{notif.message}</p>
-                          </div>
+
+                          {/* Actions associées (Boutons interactifs) */}
+                          {notif.actions && notif.actions.length > 0 && (
+                            <div className="px-3.5 pb-3.5">
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                {notif.actions.map((action) => (
+                                  <button
+                                    key={action.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAction(notif.id, action);
+                                    }}
+                                    className={`px-3 py-1.5 text-xs rounded-xl font-medium transition-all cursor-pointer ${
+                                      action.variant === "primary"
+                                        ? "bg-aiesec-blue text-white hover:bg-aiesec-blue/90 shadow-sm"
+                                        : "bg-aiesec-background border border-aiesec-border text-aiesec-text hover:bg-aiesec-surface-soft"
+                                    }`}
+                                  >
+                                    {action.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}

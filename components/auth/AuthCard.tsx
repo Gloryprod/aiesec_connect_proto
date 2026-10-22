@@ -112,7 +112,7 @@ export const AuthCard: React.FC = () => {
             ))}
           </div>
 
-        <div className="w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-xl border border-white/30 bg-aiesec-surface/75 backdrop-blur-3xl backdrop-saturate-150 lg:border-aiesec-border lg:bg-aiesec-surface lg:backdrop-blur-none lg:backdrop-saturate-100">
+        <div className="w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-xl border border-white/30 bg-aiesec-surface/70 backdrop-blur-4xl backdrop-saturate-150 lg:border-aiesec-border lg:bg-aiesec-surface lg:backdrop-blur-none lg:backdrop-saturate-100">
           {/* Brand Header */}
           <div className="flex flex-col items-center text-center mb-6">
             <div className="relative w-auto h-20 md:h-28">
@@ -125,7 +125,7 @@ export const AuthCard: React.FC = () => {
                 priority
               />
             </div>
-            <p className="font-sans text-xs text-aiesec-text-muted mt-1">
+            <p className="font-sans text-xs text-aiesec-text-secondary  mt-1">
               Connecte-toi avec des membres, partage tes expériences, construis
               ton avenir.
             </p>
@@ -276,7 +276,7 @@ export const AuthCard: React.FC = () => {
                     ? "Masquer le mot de passe"
                     : "Afficher le mot de passe"
                 }
-                className="absolute right-3.5 top-[34px] text-aiesec-text-muted hover:text-aiesec-text transition-colors cursor-pointer"
+                className="absolute right-3.5 top-8.5 text-aiesec-text-muted hover:text-aiesec-text transition-colors cursor-pointer"
               >
                 {showPassword ? (
                   <svg
@@ -333,7 +333,7 @@ export const AuthCard: React.FC = () => {
           </form>
 
           <div className="mt-6 pt-4 border-t border-aiesec-border text-center">
-            <p className="font-sans text-xs text-aiesec-text-muted">
+            <p className="font-sans text-xs text-aiesec-text-secondary">
               Rejoindre AIESEC ?{" "}
               <a
                 href="#"
