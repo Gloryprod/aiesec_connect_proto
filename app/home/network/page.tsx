@@ -68,7 +68,7 @@ export default function NetworkPage() {
                 Explorez la communauté AIESEC et envoyez des invitations pour agrandir votre réseau !
               </p>
               <button
-                onClick={() => router.push("/members")}
+                onClick={() => router.push("/home/membres")}
                 className="bg-aiesec-blue text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-aiesec-blue/90 transition-colors"
               >
                 Découvrir des membres
